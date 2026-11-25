@@ -6,8 +6,11 @@ import { FarmScene } from "./farmScene.js";
 import { ChopGame } from "./chopGame.js";
 import { createFruitFacts } from "./fruitFacts.js";
 
-// 可以抽到的蔬果（目前只有蘋果模型，之後有新模型再加進來）
-const FRUIT_POOL = [{ name: "蘋果", model: "img/newapple2.glb" }];
+// 可以抽到的蔬果（名稱需與 chopGame.js 的 FRUIT_TYPES 相同，之後有新模型再加進來）
+const FRUIT_POOL = [
+  { name: "蘋果", model: "img/newapple2.glb" },
+  { name: "西瓜", model: "img/watermelon_whole_baked.glb" },
+];
 // 抽選時輪播的名字（純粹好玩用）
 const SHUFFLE_NAMES = [
   "玉米",
@@ -17,12 +20,11 @@ const SHUFFLE_NAMES = [
   "洋蔥",
   "小麥",
   "蘋果",
+  "西瓜",
 ];
 
 // 打字效果每個字的間隔（毫秒）
 const TYPING_SPEED = 70;
-// 結算頁測試模式
-const TEST_RESULT_PAGE = false;
 
 // ---------- 取得畫面元素 ----------
 const body = document.body;
@@ -45,11 +47,7 @@ const cornerLogo = document.getElementById("cornerLogo");
 
 // ---------- 3D 場景 ----------
 const farmScene = new FarmScene(document.getElementById("farmCanvas"));
-const chopGame = new ChopGame(
-  document.getElementById("chopCanvas"),
-  () => showScreen("home"),
-  () => showScreen("result"),
-);
+const chopGame = new ChopGame(document.getElementById("chopCanvas"), () => showScreen("home"), () => showScreen("result"));
 
 // 目前狀態
 let currentScreen = "loading";
@@ -58,6 +56,8 @@ let drawToken = 0; // 避免離開抽選畫面後舊計時器繼續執行
 let isDrawing = false; // 是否正在抽選中
 let typingTimer = null; // 打字效果計時器
 let toastTimer = null;
+
+// 結算後的蔬果科普頁（Next Page 進入，最後顯示 Play Again / See More）
 const fruitFacts = createFruitFacts(
   () => showScreen("home"),
   () => showScreen("pick"),
@@ -67,11 +67,7 @@ const fruitFacts = createFruitFacts(
 function showScreen(screenName) {
   // 離開結算或重新進入時清除上一局科普頁狀態
   if (currentScreen === "result" || screenName === "result") fruitFacts.reset();
-  if (
-    ["chop", "result"].includes(currentScreen) &&
-    !["chop", "result"].includes(screenName)
-  )
-    chopGame.stop();
+  if (["chop", "result"].includes(currentScreen) && !["chop", "result"].includes(screenName)) chopGame.stop();
   drawToken++;
   isDrawing = false;
   clearTimeout(toastTimer);
@@ -81,12 +77,7 @@ function showScreen(screenName) {
   Object.entries(screens).forEach(([name, element]) => {
     element.classList.toggle("is-active", name === screenName);
   });
-  if (
-    screenName !== "loading" &&
-    screenName !== "chop" &&
-    screenName !== "result"
-  )
-    farmScene.setMode(screenName);
+  if (screenName !== "loading" && screenName !== "chop" && screenName !== "result") farmScene.setMode(screenName);
   if (screenName === "chop") farmScene.setHoveredHotspot(null);
 
   // 離開介紹畫面就停止打字
@@ -211,10 +202,7 @@ farmScene.onPick = () => {
 
   // 名字快速輪播，越來越慢，最後停在抽到的蔬果
   const drawId = ++drawToken;
-  const results = Array.from(
-    { length: 3 },
-    () => FRUIT_POOL[Math.floor(Math.random() * FRUIT_POOL.length)],
-  );
+  const results = Array.from({ length: 3 }, () => FRUIT_POOL[Math.floor(Math.random() * FRUIT_POOL.length)]);
   let step = 0;
   const totalSteps = 14;
 
@@ -251,35 +239,13 @@ document
   .addEventListener("click", () => showScreen("pick"));
 introBox.addEventListener("click", finishTyping);
 
-checkButton.addEventListener("click", async () => {
-  if (TEST_RESULT_PAGE) {
-    showScreen("chop");
-
-    await chopGame.start(
-      pickedFruits.length === 3
-        ? pickedFruits
-        : Array.from({ length: 3 }, () => FRUIT_POOL[0]),
-    );
-
-    if (!chopGame.active || currentScreen !== "chop" || !chopGame.resultRoot)
-      return;
-
-    chopGame.points = 480;
-    chopGame.gradeCounts = {
-      perfect: 3,
-      good: 3,
-      miss: 0,
-    };
-
-    chopGame.beginResult(performance.now());
-    return;
-  }
-
+checkButton.addEventListener("click", () => {
   if (pickedFruits.length !== 3) return;
   showScreen("chop");
   chopGame.start(pickedFruits);
 });
 
+// 結算計分板的 Next Page：依抽到的順序顯示蔬果科普
 document
   .getElementById("btnResultReplay")
   .addEventListener("click", () => fruitFacts.start(pickedFruits));
