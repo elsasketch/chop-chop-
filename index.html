@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CHOP CHOP菜就多多</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dokdo&family=Noto+Sans+TC:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body data-screen="loading">
+    <!-- 背景光線 -->
+    <div class="bg-rays" aria-hidden="true"></div>
+
+    <!-- 3D 農場畫布 -->
+    <canvas id="farmCanvas"></canvas>
+    <canvas id="chopCanvas" aria-label="切水果砧板"></canvas>
+
+    <!-- 載入畫面 -->
+    <section class="screen" id="screenLoading">
+      <img class="loading-logo" src="img/logo.webp" alt="CHOP 菜就 CHOP 多多" />
+      <div class="loading-bar"><span id="loadingBarFill"></span></div>
+      <p class="loading-text" id="loadingText">農場準備中… 0%</p>
+    </section>
+
+    <!-- 主畫面 -->
+    <section class="screen" id="screenHome">
+      <img class="home-logo" src="img/logo.webp" alt="CHOP 菜就 CHOP 多多" />
+      <div class="btn-stack">
+        <button class="btn" id="btnHomeFarm">Go to farm</button>
+        <button class="btn" id="btnHomeMore">See more</button>
+      </div>
+    </section>
+
+    <!-- 遊戲介紹畫面 -->
+    <section class="screen" id="screenIntro">
+      <h1 class="screen-title">Game <br />Intro</h1>
+      <div class="intro-box" id="introBox">
+        <p
+          class="intro-text"
+          data-type="歡迎來到菜就多多，這裡有各式各樣不同的蔬果等著你來切！在玩遊戲的同時還能學到各種蔬果小知識。"
+        ></p>
+        <p
+          class="intro-text"
+          data-type="沒有複雜燒腦的規則，只要跟著節奏痛快開切，就能享受刀起刀落的極致爽感，把壞心情通通切光光。"
+        ></p>
+      </div>
+      <div class="btn-stack">
+        <button class="btn" id="btnIntroFarm">Go to farm</button>
+      </div>
+    </section>
+
+    <!-- 抽選蔬果畫面 -->
+    <section class="screen" id="screenPick">
+      <h1 class="screen-title">Game<br />Start</h1>
+      <div class="pill hint-pill" id="pickHint">
+        <img src="./img/alert circle.png" class="alert-icon" alt="提示" />
+        <span>點擊菜園抽選蔬果</span>
+      </div>
+      <div class="btn-stack">
+        <button class="btn" id="btnCheck" disabled>Let's chop!</button>
+      </div>
+    </section>
+
+    <!-- QTE 切水果畫面 -->
+    <section class="screen" id="screenChop">
+      <h1 class="chop-title">Chop<br />Chop!</h1>
+      <div class="qte-panel">
+        <div class="qte-bar" id="qteBar"><span class="qte-zone" id="qteZoneA"></span><span class="qte-zone" id="qteZoneB"></span><span class="qte-pointer" id="qtePointer"></span></div>
+        <div class="qte-info"><span id="chopProgress">水果 1 / 3</span><span id="chopScore">成功 0 / 6</span></div>
+      </div>
+      <aside class="chop-guide"><p>1. 拿起桌上的水果刀</p><p>2. 抓準指針進入綠色區域的時機</p><p>3. 在砧板上模擬落刀！</p><p>4. 享受切水果！</p></aside>
+      <div id="chopFeedback" class="chop-feedback" role="status">準備中…</div>
+      <div class="chop-actions"><button class="btn" id="btnStrike" disabled>Chop!</button>
+    </section>
+
+    <!-- 水果裝盤與結算 -->
+    <section class="screen" id="screenResult">
+      <h1 class="result-title">Chop<br />Complete!</h1>
+      <p id="resultStatus" class="result-status" role="status">水果裝盤中…</p>
+      <div id="resultScorePanel" class="result-score-panel" inert>
+        <p class="result-eyebrow">YOUR SCORE</p>
+        <div class="result-total" aria-live="polite"><strong id="resultPoints">0</strong><span id="resultMax">/ 100</span></div>
+        <div class="result-grades">
+          <div><img src="img/perfect.png" alt="Perfect" /><strong id="result-perfect">0</strong></div>
+          <div><img src="img/good.png" alt="Good" /><strong id="result-good">0</strong></div>
+          <div><img src="img/miss.png" alt="Miss" /><strong id="result-miss">0</strong></div>
+        </div>
+        <p class="result-rule">Perfect 100% · Good 60% · Miss 0%</p>
+        <button class="btn" id="btnResultReplay">Next Page</button>
+        
+      </div>
+      <!-- 沿用計分板外框的科普卡片 -->
+      <div id="fruitFactsPanel" class="result-score-panel fruit-facts-panel" inert hidden>
+        <h2 class="facts-title">FRUIT FACTS</h2>
+        <p id="factsPage" class="facts-page" aria-live="polite">01 / 03</p>
+        <img id="factsImage" class="facts-image" alt="" />
+        <h3 id="factsName" class="facts-name"></h3>
+        <p id="factsEnglish" class="facts-english"></p>
+        <div class="facts-info">
+          <h4>營養小知識</h4><p id="factsNutrition"></p>
+          <hr />
+          <h4>你知道嗎？</h4><p id="factsTrivia"></p>
+        </div>
+        <button class="btn" id="btnFactsNext">Next Page</button>
+        <div id="factsDots" class="facts-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      </div>
+      <div id="replayCenter" class="replay-center" hidden inert>
+        <button class="btn" id="btnPlayAgain">Play Again</button>
+        <button class="btn" id="btnReplayMore">See More</button>
+      </div>
+    </section>
+
+    <!-- 右上角小 logo（介紹之後的畫面都會出現） -->
+    <img
+      class="corner-logo"
+      id="cornerLogo"
+      src="img/logo_cloud.webp"
+      alt="回到主畫面"
+      title="回到主畫面"
+    />
+
+    <!-- 滑鼠 hover 提示詞 -->
+    <div class="pill hover-tip" id="hoverTip"></div>
+
+    <!-- 中央提示訊息 -->
+    <div class="toast" id="toast"></div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

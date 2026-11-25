@@ -1,0 +1,954 @@
+/* ===== 基本設定 ===== */
+:root {
+  --cream: #f4f1dc;
+  --sage: #fdffe9;
+  --ink: #3d3d3d;
+  --lime: #c8e02c;
+  --lime-dark: #a9c21a;
+  --lime-light: #e3f27a;
+  --logo-green: #adc436;
+  --panel: rgba(253, 249, 236, 0.94);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Noto Sans TC", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(
+    160deg,
+    var(--cream) 0%,
+    #e9ecd8 45%,
+    var(--sage) 100%
+  );
+}
+
+/* 斜射光線 */
+.bg-rays {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0) 18%,
+      rgba(255, 255, 255, 0.55) 22%,
+      rgba(255, 255, 255, 0) 30%
+    ),
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0) 34%,
+      rgba(255, 255, 255, 0.35) 38%,
+      rgba(255, 255, 255, 0) 44%
+    ),
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0) 6%,
+      rgba(255, 255, 255, 0.4) 10%,
+      rgba(255, 255, 255, 0) 15%
+    );
+}
+
+/* ===== 3D 畫布 ===== */
+#farmCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition:
+    opacity 1s ease,
+    filter 1s ease;
+  touch-action: none;
+}
+/* 主畫面：滿版且清楚顯示農場 */
+body[data-screen="home"] #farmCanvas {
+  opacity: 1;
+}
+/* 介紹畫面：農場淡淡的在背景 */
+body[data-screen="intro"] #farmCanvas {
+  opacity: 0.45;
+}
+body[data-screen="intro"] #farmCanvas {
+  filter: blur(1px);
+}
+/* 抽選畫面：完整顯示 */
+body[data-screen="pick"] #farmCanvas,
+body[data-screen="fruit"] #farmCanvas {
+  opacity: 1;
+}
+body[data-screen="pick"] #farmCanvas {
+  cursor: grab;
+}
+body[data-screen="pick"] #farmCanvas.is-dragging {
+  cursor: grabbing;
+}
+body[data-screen="pick"] #farmCanvas.is-hovering {
+  cursor: pointer;
+}
+
+/* ===== 畫面容器 ===== */
+.screen {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.6s ease,
+    visibility 0s linear 0.6s;
+}
+.screen.is-active {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.6s ease,
+    visibility 0s;
+}
+.screen.is-active .btn,
+.screen.is-active .intro-box,
+.screen.is-active .home-logo {
+  pointer-events: auto;
+}
+
+/* ===== 載入畫面 ===== */
+#screenLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+.loading-logo {
+  width: min(420px, 70vw);
+  mix-blend-mode: multiply;
+  animation: bob 2s ease-in-out infinite;
+}
+.loading-bar {
+  width: min(320px, 70vw);
+  height: 12px;
+  border-radius: 99px;
+  background: rgba(173, 196, 54, 0.2);
+  overflow: hidden;
+}
+#loadingBarFill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--logo-green);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.loading-text {
+  font-size: 14px;
+  letter-spacing: 0.2em;
+}
+
+/* ===== 主畫面 ===== */
+.home-logo {
+  position: absolute;
+  left: -1vw;
+  top: -2vh;
+  width: min(48vw, 760px);
+  mix-blend-mode: multiply;
+  transform: translateY(-30px) scale(0.9);
+  transition:
+    transform 1s var(--ease-out) 0.2s,
+    opacity 1s ease 0.2s;
+}
+#screenHome.is-active .home-logo {
+  transform: none;
+  opacity: 1;
+  animation: bob 4s ease-in-out 1.2s infinite;
+}
+
+/* ===== 標題字 ===== */
+.screen-title {
+  position: absolute;
+  left: 5vw;
+  top: 4vh;
+  font-family: "Dokdo", cursive;
+  font-weight: 400;
+  font-size: clamp(72px, 11vw, 190px);
+  line-height: 0.75;
+  letter-spacing: 0.06em;
+  color: #4a4a4a;
+  transform: translateX(-40px);
+
+  transition:
+    transform 0.8s var(--ease-out),
+    opacity 0.8s ease;
+}
+.screen.is-active .screen-title {
+  transform: none;
+  opacity: 1;
+}
+
+/* ===== 膠囊提示 ===== */
+.pill {
+  background: var(--panel);
+  border-radius: 999px;
+  padding: 14px 34px;
+  font-size: clamp(15px, 1.4vw, 22px);
+  letter-spacing: 0.35em;
+  box-shadow:
+    0 6px 18px rgba(80, 90, 40, 0.12),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+}
+.hint-pill {
+  position: absolute;
+  left: 4vw;
+  top: calc(7vh + clamp(72px, 11vw, 190px) * 2.05);
+  transform: translateX(-40px);
+  opacity: 0;
+  transition:
+    transform 0.8s var(--ease-out) 0.15s,
+    opacity 0.8s ease 0.15s;
+}
+.screen.is-active .hint-pill {
+  transform: none;
+  opacity: 1;
+}
+
+/* hover 提示詞 */
+.hover-tip {
+  font-size: 14px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -100%) scale(0.85);
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s var(--ease-out);
+  z-index: 20;
+}
+.hover-tip.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -100%) scale(1);
+}
+
+/* ===== 按鈕 ===== */
+.btn-stack {
+  position: absolute;
+  right: 6vw;
+  bottom: 8vh;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.btn {
+  width: clamp(220px, 18vw, 340px);
+  height: clamp(64px, 7.5vh, 96px);
+  border: 3px solid var(--lime-light);
+  border-radius: 26px;
+  background: linear-gradient(
+    180deg,
+    #d4ea3a 0%,
+    var(--lime) 55%,
+    var(--lime-dark) 100%
+  );
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -5px 0 rgba(120, 140, 0, 0.25),
+    0 8px 20px rgba(110, 130, 20, 0.25);
+  font-family: "Dokdo", cursive;
+  font-size: clamp(32px, 2.8vw, 48px);
+  letter-spacing: 0.08em;
+  color: #333;
+  cursor: pointer;
+  transform: translateX(60px);
+  opacity: 0;
+  transition:
+    transform 0.25s var(--ease-out),
+    opacity 0.6s ease,
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.screen.is-active .btn {
+  transform: none;
+  opacity: 1;
+}
+.screen.is-active .btn:nth-child(2) {
+  transition-delay: 0s, 0.15s, 0s, 0s;
+}
+.btn:hover {
+  filter: brightness(1.06);
+  transform: translateY(-3px) !important;
+}
+.btn:active {
+  transform: translateY(2px) scale(0.98) !important;
+}
+.btn:disabled {
+  filter: grayscale(0.7) brightness(1.05);
+  cursor: not-allowed;
+  opacity: 0.55 !important;
+}
+.btn.is-ready {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* ===== 介紹框 ===== */
+.intro-box {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: min(800px, 48vw);
+  min-height: 30vh;
+  padding: clamp(20px, 2vw, 40px) clamp(24px, 3vw, 50px);
+  background: var(--panel);
+  border-radius: 34px;
+  box-shadow:
+    0 0 0 10px rgba(255, 255, 255, 0.35),
+    0 24px 60px rgba(70, 80, 30, 0.18);
+  /* 一開始藏在畫面右側外面 */
+  transform: translate(60vw, -50%);
+  opacity: 0;
+  transition:
+    transform 0.9s var(--ease-out),
+    opacity 0.5s ease;
+  cursor: pointer;
+}
+#screenIntro.is-active .intro-box {
+  transform: translate(-45%, -50%);
+  opacity: 1;
+}
+.intro-text {
+  font-size: clamp(14px, 1.3vw, 22px);
+  line-height: 2;
+  letter-spacing: 0.4em;
+  min-height: 2em;
+}
+.intro-text + .intro-text {
+  margin-top: 1.2em;
+}
+/* 打字游標 */
+.intro-text.is-typing::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 4px;
+  vertical-align: -0.15em;
+  background: var(--ink);
+  animation: blink 0.8s step-end infinite;
+}
+
+/* ===== 右上角 logo ===== */
+.corner-logo {
+  position: fixed;
+  right: 3vw;
+  top: 4vh;
+  width: clamp(150px, 13vw, 250px);
+  mix-blend-mode: multiply;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.6) rotate(-8deg);
+  transition:
+    transform 0.6s var(--ease-out),
+    opacity 0.4s ease;
+  z-index: 10;
+}
+body[data-screen="intro"] .corner-logo,
+body[data-screen="pick"] .corner-logo,
+body[data-screen="fruit"] .corner-logo {
+  opacity: 1;
+  pointer-events: auto;
+  transform: rotate(12deg) scale(1);
+}
+.corner-logo:hover {
+  transform: scale(1.05) rotate(-3deg) !important;
+}
+
+/* ===== 提示訊息 ===== */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 10vh;
+  transform: translate(-50%, 30px);
+  background: var(--panel);
+  border-radius: 999px;
+  padding: 16px 40px;
+  font-size: clamp(12px, 1.1vw, 18px);
+  letter-spacing: 0.25em;
+  box-shadow: 0 10px 30px rgba(70, 80, 30, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.3s ease,
+    transform 1s var(--ease-out);
+  z-index: 30;
+  white-space: nowrap;
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.toast strong {
+  color: #c0392b;
+  font-weight: 500;
+}
+
+/* ===== 動畫 ===== */
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 3px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -5px 0 rgba(120, 140, 0, 0.25),
+      0 8px 20px rgba(110, 130, 20, 0.25),
+      0 0 0 0 rgba(200, 224, 44, 0.6);
+  }
+  50% {
+    box-shadow:
+      inset 0 3px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -5px 0 rgba(120, 140, 0, 0.25),
+      0 8px 20px rgba(110, 130, 20, 0.25),
+      0 0 0 14px rgba(200, 224, 44, 0);
+  }
+}
+
+/* ===== 手機版 ===== */
+@media (max-width: 760px) {
+  .home-logo {
+    width: 88vw;
+    left: 6vw;
+    top: 10vh;
+  }
+  .btn-stack {
+    right: 50%;
+    transform: translateX(50%);
+    bottom: 6vh;
+  }
+  .intro-box {
+    width: 88vw;
+    top: 50%;
+  }
+  #screenIntro.is-active .intro-box {
+    transform: translate(-50%, -50%);
+  }
+  .intro-text {
+    letter-spacing: 0.2em;
+  }
+  .screen-title {
+    font-size: 48px;
+    top: 4vh;
+  }
+  .hint-pill {
+    top: calc(4vh + 120px);
+    padding: 10px 20px;
+    letter-spacing: 0.2em;
+  }
+  .pill {
+    letter-spacing: 0.2em;
+  }
+}
+#pickHint {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  left: 6vw;
+  top: 37vh;
+  font-size: clamp(14px, 1.3vw, 22px);
+}
+
+.alert-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+/* ===== QTE 切水果 ===== */
+#chopCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.55s ease;
+  touch-action: none;
+}
+body[data-screen="chop"] #chopCanvas {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  cursor: crosshair;
+}
+body[data-screen="chop"] #farmCanvas {
+  pointer-events: none;
+}
+.chop-title {
+  position: absolute;
+  left: 4vw;
+  top: 4vh;
+  font:
+    400 clamp(44px, 7vw, 112px)/0.9 "Dokdo",
+    cursive;
+  color: white;
+  text-shadow: 0 2px 5px #0002;
+}
+.qte-panel {
+  position: absolute;
+  top: 7vh;
+  left: 34vw;
+  right: 6vw;
+}
+.qte-bar {
+  position: relative;
+  height: clamp(16px, 2.8vh, 30px);
+  background: #fafaf5;
+  border-radius: 999px;
+  box-shadow: 0 3px 8px #0001;
+}
+.qte-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #c9eb27;
+  border-radius: 999px;
+}
+.qte-zone.is-used {
+  background: #b7b7ae;
+}
+.qte-zone:first-child {
+  left: 16%;
+  width: 17%;
+}
+.qte-zone:nth-child(2) {
+  left: 66%;
+  width: 17%;
+}
+.qte-pointer {
+  position: absolute;
+  left: 0;
+  top: -9px;
+  height: calc(100% + 18px);
+  width: 3px;
+  background: #454545;
+  transform: translateX(-50%);
+}
+.qte-pointer::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: -6px;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 12px solid #454545;
+}
+.qte-info {
+  display: flex;
+  justify-content: space-between;
+  color: #36382b;
+  font-size: clamp(12px, 1.2vw, 17px);
+  margin-top: 15px;
+  background: #fff9;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.chop-guide {
+  position: absolute;
+  left: 3vw;
+  top: 36vh;
+  width: min(26vw, 330px);
+  padding: clamp(12px, 1.6vw, 24px);
+  border: 3px solid #fff9e8;
+  border-radius: 22px;
+  background: #fff3d6d9;
+  color: #46492d;
+  font-size: clamp(11px, 1.3vw, 18px);
+  line-height: 1.7;
+  box-shadow: 0 8px 20px #0001;
+}
+.chop-guide p + p {
+  margin-top: 1em;
+}
+.chop-feedback {
+  position: absolute;
+  left: 50%;
+  bottom: 9vh;
+  transform: translateX(-50%);
+  font-size: clamp(12px, 1.2vw, 20px);
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  text-align: center;
+  white-space: nowrap;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #fffdebd9;
+  color: #45452e;
+}
+/* 切割回饋使用透明圖片，不保留原本的文字底框。 */
+.chop-feedback:has(.chop-feedback-image) {
+  background: transparent;
+  padding: 0;
+  pointer-events: none;
+  left: 82%;
+  bottom: 40vh;
+  transform: translateX(-50%);
+}
+.chop-feedback-image {
+  display: block;
+  width: clamp(450px, 30vw, 400px);
+  height: auto;
+  max-height: 40vh;
+  object-fit: contain;
+  transform-origin: center;
+  animation: chop-feedback-pop 600ms ease-out both;
+  rotate: 15deg;
+}
+@keyframes chop-feedback-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  30% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+
+  50% {
+    transform: scale(0.85);
+  }
+
+  70% {
+    transform: scale(1.12);
+  }
+
+  85% {
+    transform: scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chop-feedback-image {
+    animation: none;
+  }
+}
+.chop-feedback.is-miss {
+  color: #a94f3a;
+}
+.chop-actions {
+  position: absolute;
+  right: 6vw;
+  bottom: 8vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: auto;
+}
+.chop-actions .btn {
+  width: clamp(112px, 15vw, 240px);
+}
+.chop-exit {
+  background: #fffde8e5;
+  border: 0;
+  padding: 7px 18px;
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+  color: #444;
+}
+@media (max-width: 760px) {
+  .chop-title {
+    font-size: 44px;
+    top: 3vh;
+  }
+  .qte-panel {
+    left: 32vw;
+    right: 5vw;
+    top: 5vh;
+  }
+  .chop-guide {
+    top: 22vh;
+    width: 39vw;
+    padding: 8px;
+    font-size: 11px;
+  }
+  .chop-feedback {
+    bottom: 16vh;
+    max-width: 90vw;
+    white-space: normal;
+  }
+  .chop-actions {
+    bottom: 3vh;
+    left: 0;
+    right: 0;
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+/* ===== 水果裝盤與結算 ===== */
+body[data-screen="result"] #chopCanvas {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: none;
+}
+body[data-screen="result"] #farmCanvas {
+  pointer-events: none;
+}
+.result-title {
+  position: absolute;
+  left: 4vw;
+  top: 4vh;
+  color: white;
+  text-shadow: 0 2px 5px #0002;
+  font:
+    400 clamp(44px, 7vw, 105px)/0.85 "Dokdo",
+    cursive;
+}
+.result-status {
+  position: absolute;
+  left: 50%;
+  bottom: 8vh;
+  transform: translateX(-50%);
+  background: #fffdebd9;
+  padding: 10px 24px;
+  border-radius: 999px;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+}
+.result-status.is-finished {
+  opacity: 0;
+}
+.result-score-panel {
+  position: absolute;
+  right: 4vw;
+  top: 50%;
+  width: min(35vw, 460px);
+  height: 650px;
+  padding: clamp(18px, 2.6vw, 36px);
+  border: 3px solid #eef6b5;
+  border-radius: 28px;
+  background: #f9f9dfed;
+  box-shadow: 0 10px 35px #42482120;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-42%) scale(0.75);
+  pointer-events: none;
+}
+.result-score-panel.is-revealed {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  animation: result-reveal 0.65s cubic-bezier(0.2, 1.45, 0.45, 1) both;
+  pointer-events: auto;
+}
+@keyframes result-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-42%) scale(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+.result-eyebrow {
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #798b25;
+  font-size: clamp(40px, 2vw, 50px);
+}
+.result-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  color: #596a16;
+}
+.result-total strong {
+  font:
+    400 clamp(60px, 8vw, 112px)/1 "Dokdo",
+    cursive;
+}
+.result-total span {
+  font-size: 20px;
+}
+.result-grades {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 22px 0;
+}
+.result-grades div {
+  display: grid;
+  justify-items: center;
+}
+.result-grades img {
+  width: 100%;
+  height: 110px;
+  object-fit: contain;
+  transform: translateY(-15px) scale(1.25);
+}
+.result-grades strong {
+  font-size: 35px;
+  margin-top: -15px;
+}
+.result-rule {
+  width: 100%;
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-align: center;
+  white-space: nowrap;
+  margin-bottom: 18px;
+}
+.result-score-panel .btn {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+.result-score-panel:not(.is-revealed) .btn {
+  pointer-events: none;
+}
+.result-score-panel .result-home {
+  background: #fffde8;
+}
+@media (max-width: 760px), (orientation: portrait) {
+  .result-title {
+    font-size: 48px;
+  }
+  .result-score-panel {
+    top: auto;
+    bottom: 2vh;
+    left: 50%;
+    right: auto;
+    width: min(92vw, 460px);
+    padding: 12px 18px;
+    transform: translate(-50%, 10%) scale(0.8);
+  }
+  .result-score-panel.is-revealed {
+    transform: translate(-50%, 0) scale(1);
+    animation: result-reveal-mobile 0.65s cubic-bezier(0.2, 1.45, 0.45, 1) both;
+  }
+  .result-total strong {
+    font-size: 58px;
+  }
+  .result-grades {
+    margin: 4px 0;
+  }
+  .result-grades img {
+    height: 70px;
+  }
+  .result-grades strong {
+    font-size: 18px;
+  }
+  .result-rule {
+    margin-bottom: 6px;
+  }
+  .result-score-panel .btn {
+    min-height: 36px;
+    padding: 6px 12px;
+  }
+  @keyframes result-reveal-mobile {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 10%) scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1);
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-score-panel.is-revealed {
+    animation: none;
+  }
+}
+
+/* 切水果背景：原始圖片不受 Three.js 燈光及曝光影響。 */
+body[data-screen="chop"] #chopCanvas {
+  background: #e8e2cf url("../img/chopboard.png") center center / cover
+    no-repeat;
+}
+/* 結算頁按鈕位置：與共用 hover / active transform 分開 */
+#btnResultReplay {
+  position: relative;
+  top: 80px;
+}
+
+/* ===== 蔬果科普：共用原計分板的位置、外框尺寸及背景 ===== */
+.result-score-panel.facts-score-hidden { visibility: hidden; opacity: 0; pointer-events: none; animation: none; }
+.fruit-facts-panel[hidden], .replay-center[hidden] { display: none; }
+.fruit-facts-panel {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 5px; padding: 24px clamp(16px, 2vw, 30px);
+  font-family: 'Noto Sans TC', sans-serif;
+  overflow: auto;
+}
+.facts-title { color: #798b25; font-size: clamp(23px, 2.1vw, 34px); letter-spacing: .13em; font-weight: 800; white-space: nowrap; }
+.facts-page { color: #838966; font-size: 15px; letter-spacing: .2em; }
+.facts-image { width: 75%; flex: 1 1 150px; min-height: 70px; max-height: 175px; object-fit: contain; }
+.facts-image[hidden] { display: none; }
+.facts-name { color: #54651d; font-size: 34px; line-height: 1.15; font-weight: 800; }
+.facts-english { color: #798b25; font-size: 18px; letter-spacing: .25em; }
+.facts-info { width: 100%; border-radius: 20px; background: #e8edce; text-align: left; padding: 15px 17px; margin: 10px 0 3px; }
+.facts-info h4 { color: #667c23; font-size: 18px; margin-bottom: 5px; font-weight: 800; }
+.facts-info p { font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+.facts-info hr { border: 0; border-top: 2px dashed #cbd3a5; margin: 10px 0; }
+.fruit-facts-panel .btn { flex-shrink: 0; margin-top: auto; height: 58px; font: 700 24px 'Noto Sans TC', sans-serif; letter-spacing: .13em; }
+.facts-dots { display: flex; gap: 8px; padding-top: 10px; }
+.facts-dots span { width: 10px; height: 10px; border-radius: 50%; background: #d2d9ab; }
+.facts-dots span.is-current { background: #82962a; }
+.fruit-facts-panel.facts-leaving { animation: facts-fade .3s ease both; pointer-events: none; }
+@keyframes facts-fade { from { opacity: 1; } to { opacity: 0; } }
+/* 不保留科普外框；按鈕單獨從整個畫面中央彈出 */
+.replay-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; pointer-events: none; }
+.replay-center::before { content: ""; position: absolute; inset: 0; z-index: 0; background: rgba(20, 27, 10, .48); animation: replay-backdrop .7s ease both; }
+.replay-center .btn { position: relative; z-index: 1; width: min(78vw, 340px); font-family: "Dokdo", cursive; font-size: clamp(32px, 2.8vw, 48px); letter-spacing: .08em; animation: replay-pop .7s both; }
+@keyframes replay-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes replay-pop { 0% { opacity: 0; transform: translateY(25px) scale(.35); } 55% { opacity: 1; transform: translateY(-12px) scale(1.12); } 76% { transform: translateY(4px) scale(.96); } 90% { transform: translateY(-3px) scale(1.02); } 100% { opacity: 1; transform: none; } }
+@media (max-height: 700px) {
+  /* 兩種卡片同步縮短，維持相同外框且不超出螢幕。 */
+  .result-score-panel { height: min(650px, 94vh); }
+  .fruit-facts-panel { padding-top: 12px; padding-bottom: 12px; gap: 3px; }
+  .facts-info { padding: 10px 13px; margin: 4px 0; }
+  .facts-info p { font-size: 13px; }
+  .facts-info h4 { font-size: 16px; }
+  .facts-info hr { margin: 6px 0; }
+  .facts-name { font-size: 27px; }
+  .fruit-facts-panel .btn { height: 44px; font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .replay-center .btn, .fruit-facts-panel.facts-leaving { animation: none; } }
