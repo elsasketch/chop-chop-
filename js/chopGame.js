@@ -1180,7 +1180,7 @@ export class ChopGame {
     const feedbackImages = {
       perfect: "img/perfect.png",
       good: "img/good.png",
-      miss: "img/fighting.png",
+      miss: "img/miss.png",
     };
     const result =
       distanceToGreen === 0
